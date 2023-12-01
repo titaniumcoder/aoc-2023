@@ -1,0 +1,203 @@
+# AoC 2023 - Day 1
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## AoC Exercise with description
+
+--- Day 1: Trebuchet?! ---
+
+Something is wrong with global snow production, and you've been selected to take a look. The Elves have even given you a map; on it, they've used stars to mark the top fifty locations that are likely to be having problems.
+
+You've been doing this long enough to know that to restore snow operations, you need to check all fifty stars by December 25th.
+
+Collect stars by solving puzzles. Two puzzles will be made available on each day in the Advent calendar; the second puzzle is unlocked when you complete the first. Each puzzle grants one star. Good luck!
+
+You try to ask why they can't just use a weather machine ("not powerful enough") and where they're even sending you ("the sky") and why your map looks mostly blank ("you sure ask a lot of questions") and hang on did you just say the sky ("of course, where do you think snow comes from") when you realize that the Elves are already loading you into a trebuchet ("please hold still, we need to strap you in").
+
+As they're making the final adjustments, they discover that their calibration document (your puzzle input) has been amended by a very young Elf who was apparently just excited to show off her art skills. Consequently, the Elves are having trouble reading the values on the document.
+
+The newly-improved calibration document consists of lines of text; each line originally contained a specific calibration value that the Elves now need to recover. On each line, the calibration value can be found by combining the first digit and the last digit (in that order) to form a single two-digit number.
+
+For example:
+
+```
+1abc2
+pqr3stu8vwx
+a1b2c3d4e5f
+treb7uchet
+```
+
+In this example, the calibration values of these four lines are 12, 38, 15, and 77. Adding these together produces 142.
+
+Consider your entire calibration document. What is the sum of all of the calibration values?
+
+```elixir
+input = Kino.Input.textarea("Input for solution")
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def solution(nil), do: nil
+
+  def solution(line) do
+    first = find_first_number(line)
+    last = find_last_number(line)
+
+    solution = "#{first}#{last}"
+    String.to_integer(solution)
+  end
+
+  defp find_first_number(nil), do: :error
+
+  defp find_first_number(line) do
+    search_in_codepoints(String.codepoints(line))
+  end
+
+  defp search_in_codepoints([]), do: 0
+
+  defp search_in_codepoints([hd | tl]) do
+    case Integer.parse(hd) do
+      :error -> search_in_codepoints(tl)
+      {int, ""} -> int
+    end
+  end
+
+  defp find_last_number(line) do
+    line |> String.reverse() |> find_first_number
+  end
+end
+```
+
+```elixir
+%{
+  expected: [12, 38, 15, 77],
+  calculated:
+    String.split("""
+    1abc2
+    pqr3stu8vwx
+    a1b2c3d4e5f
+    treb7uchet
+    """)
+    |> Enum.map(&Part1.solution/1)
+}
+```
+
+```elixir
+Kino.Input.read(input)
+|> String.split()
+|> Enum.map(&Part1.solution/1)
+|> Enum.sum()
+```
+
+## Part 2
+
+Your calculation isn't quite right. It looks like some of the digits are actually spelled out with letters: one, two, three, four, five, six, seven, eight, and nine also count as valid "digits".
+
+Equipped with this new information, you now need to find the real first and last digit on each line. For example:
+
+```
+two1nine
+eightwothree
+abcone2threexyz
+xtwone3four
+4nineeightseven2
+zoneight234
+7pqrstsixteen
+```
+
+In this example, the calibration values are 29, 83, 13, 24, 42, 14, and 76. Adding these together produces 281.
+
+```elixir
+defmodule Part2 do
+  def solution(nil), do: nil
+
+  @number_map %{
+    "one" => 1,
+    "two" => 2,
+    "three" => 3,
+    "four" => 4,
+    "five" => 5,
+    "six" => 6,
+    "seven" => 7,
+    "eight" => 8,
+    "nine" => 9,
+    "1" => 1,
+    "2" => 2,
+    "3" => 3,
+    "4" => 4,
+    "5" => 5,
+    "6" => 6,
+    "7" => 7,
+    "8" => 8,
+    "9" => 9
+  }
+
+  def solution(line) do
+    first = find_first_number(line)
+    last = find_last_number(line)
+
+    solution = "#{first}#{last}"
+    String.to_integer(solution)
+  end
+
+  defp find_first_number(line) do
+    {_, rest} = String.split_at(line, 1)
+
+    line
+    |> find_in_map(&String.starts_with?/2)
+    |> case do
+      nil -> find_first_number(rest)
+      value -> value
+    end
+  end
+
+  defp find_last_number(line) do
+    {rest, _} = String.split_at(line, -1)
+
+    line
+    |> find_in_map(&String.ends_with?/2)
+    |> case do
+      nil -> find_last_number(rest)
+      value -> value
+    end
+  end
+
+  defp find_in_map(line, func) do
+    Enum.find(@number_map, fn {k, _v} -> func.(line, k) end)
+    |> case do
+      nil -> nil
+      {_k, v} -> v
+    end
+  end
+end
+```
+
+```elixir
+input_p2 = """
+two1nine
+eightwothree
+abcone2threexyz
+xtwone3four
+4nineeightseven2
+zoneight234
+7pqrstsixteen
+"""
+
+%{
+  expected: [29, 83, 13, 24, 42, 14, 76],
+  calculated: String.split(input_p2) |> Enum.map(&Part2.solution/1)
+}
+```
+
+```elixir
+Kino.Input.read(input)
+|> String.split()
+|> Enum.map(&Part2.solution/1)
+|> Enum.sum()
+```
