@@ -1,0 +1,172 @@
+# Day 4
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Part 1
+
+## Solution
+
+```elixir
+defmodule Parser do
+  defmodule Line do
+    # Cubes are a list of tuples, each tuple in {r, g, b}
+    defstruct [:title, :matches, copies: 1]
+  end
+
+  def parse_line(line) do
+    {title, winning_numbers, numbers} = split_and_parse_numbers(line)
+
+    %Parser.Line{
+      title: title,
+      matches: find_matches(winning_numbers, numbers, 0)
+    }
+  end
+
+  defp split_and_parse_numbers(line) do
+    [card_name, numbers] = String.split(line, ":")
+    [winning_numbers, just_numbers] = String.split(numbers, "|")
+
+    {
+      String.trim(card_name),
+      transform_to_numbers(winning_numbers),
+      transform_to_numbers(just_numbers)
+    }
+  end
+
+  defp transform_to_numbers(numbers) do
+    numbers
+    |> String.split(" ")
+    |> Enum.map(&String.trim/1)
+    |> Enum.filter(fn i -> i != "" end)
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  defp find_matches(_winning_numbers, [], agg), do: agg
+
+  defp find_matches(winning_numbers, [hd | tl], agg) do
+    number_value =
+      if hd in winning_numbers do
+        1
+      else
+        0
+      end
+
+    find_matches(winning_numbers, tl, agg + number_value)
+  end
+end
+```
+
+```elixir
+"""
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+"""
+|> String.split("\n")
+|> Enum.filter(fn s -> s != "" end)
+|> Enum.map(fn card -> "#{card} -> #{inspect(Parser.parse_line(card))}" end)
+```
+
+```elixir
+defmodule Part1 do
+  def solution(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&Parser.parse_line/1)
+    |> Enum.map(fn %Parser.Line{matches: matches} -> value(matches) end)
+    |> Enum.sum()
+  end
+
+  defp value(0), do: 0
+  defp value(matches), do: 2 ** (matches - 1)
+end
+```
+
+```elixir
+Part1.solution("""
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+""")
+```
+
+```elixir
+input1 = Kino.Input.textarea("Full Input")
+```
+
+```elixir
+lines1 = Kino.Input.read(input1)
+Part1.solution(lines1)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  defmodule Agg do
+    defstruct card_count: [], copies: []
+  end
+
+  def solution(input) do
+    input
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&Parser.parse_line/1)
+    |> play_scratchcards([])
+    |> Enum.map(fn %{copies: copies} -> copies end)
+    |> Enum.sum()
+  end
+
+  defp play_scratchcards([], played), do: Enum.reverse(played)
+
+  defp play_scratchcards([current_card | remaining_cards], played) do
+    remaining_cards
+    |> increase_next_cards_by_card_value(current_card)
+    |> play_scratchcards([current_card | played])
+  end
+
+  defp increase_next_cards_by_card_value(remaining_cards, %{copies: copies, matches: matches}) do
+    {cards_to_increase, unchanged} =
+      Enum.split(remaining_cards, matches)
+
+    new_cards =
+      cards_to_increase
+      |> Enum.map(fn card ->
+        %{
+          card
+          | copies: card.copies + copies
+        }
+      end)
+
+    new_cards ++ unchanged
+  end
+end
+```
+
+```elixir
+Part2.solution("""
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+""")
+```
+
+## Solutions
+
+```elixir
+Part2.solution(lines1)
+```
