@@ -1,0 +1,135 @@
+# Day 6
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Part 1
+
+```elixir
+sample_input_text = Kino.Input.textarea("Sample Input")
+```
+
+```elixir
+sample_input = Kino.Input.read(sample_input_text)
+```
+
+## Solution
+
+```elixir
+defmodule Parser do
+  defmodule Input do
+    # Cubes are a list of tuples, each tuple in {r, g, b}
+    defstruct times: [], distances: [], long_time: 0, long_distance: 0
+  end
+
+  def parse_input(input) do
+    [times, distances] = String.split(input, "\n")
+
+    %Input{
+      times: title_less_numbers(times),
+      distances: title_less_numbers(distances),
+      long_time: one_number(times),
+      long_distance: one_number(distances)
+    }
+  end
+
+  defp title_less_numbers(line) do
+    [_title, numbers] = String.split(line, ":")
+
+    numbers
+    |> String.trim()
+    |> String.split()
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  defp one_number(line) do
+    [_title, numbers] = String.split(line, ":")
+
+    numbers
+    |> String.trim()
+    |> String.split()
+    |> Enum.map(&String.trim/1)
+    |> Enum.reduce(fn s1, s2 -> s2 <> s1 end)
+    |> String.to_integer()
+  end
+end
+```
+
+```elixir
+Parser.parse_input(sample_input)
+```
+
+```elixir
+defmodule Part1 do
+  def solution(input) do
+    %{times: times, distances: distances} = Parser.parse_input(input)
+
+    Enum.zip(times, distances)
+    |> Enum.map(&calculate_possibilities/1)
+    |> Enum.reduce(&multiply/2)
+  end
+
+  defp multiply(a, b), do: a * b
+
+  defp calculate_possibilities({time, minimal_distance}) do
+    # first step: brute force
+    0..time
+    |> Enum.map(&calculate_distance(&1, time))
+    |> Enum.filter(fn d -> d > minimal_distance end)
+    |> Enum.count()
+  end
+
+  defp calculate_distance(button_pressed_time, max_time) do
+    (max_time - button_pressed_time) * button_pressed_time
+  end
+end
+```
+
+```elixir
+Part1.solution(sample_input)
+```
+
+```elixir
+input1 = Kino.Input.textarea("Full Input")
+```
+
+```elixir
+lines1 = Kino.Input.read(input1)
+Part1.solution(lines1)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def solution(input) do
+    %{long_time: time, long_distance: distance} = Parser.parse_input(input)
+
+    calculate_possibilities({time, distance})
+  end
+
+  defp calculate_possibilities({time, minimal_distance}) do
+    # first step: brute force
+    0..time
+    |> Enum.map(&calculate_distance(&1, time))
+    |> Enum.filter(fn d -> d > minimal_distance end)
+    |> Enum.count()
+  end
+
+  defp calculate_distance(button_pressed_time, max_time) do
+    (max_time - button_pressed_time) * button_pressed_time
+  end
+end
+```
+
+```elixir
+Part2.solution(sample_input)
+```
+
+```elixir
+Part2.solution(lines1)
+```
