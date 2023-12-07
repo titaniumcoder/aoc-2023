@@ -1,0 +1,185 @@
+# Day 5 Ranges
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"},
+  {:req, "~> 0.4.5"}
+])
+```
+
+## Section
+
+```elixir
+input = Kino.Input.textarea("Sample")
+```
+
+```elixir
+sample = Kino.Input.read(input)
+```
+
+```elixir
+full_input_area = Kino.Input.textarea("Full Input")
+```
+
+```elixir
+full_input = Kino.Input.read(full_input_area)
+```
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    [seeds | maps] =
+      input
+      |> String.trim_trailing("\n")
+      |> String.split("\n\n")
+
+    %{seeds: parse_seeds(seeds), maps: parse_maps(maps)}
+  end
+
+  defp parse_seeds(line) do
+    [_title, seeding] =
+      line
+      |> String.split(":")
+
+    seeding
+    |> String.trim()
+    |> String.split()
+    |> Enum.map(&String.to_integer/1)
+  end
+
+  defp parse_maps(maps, agg \\ [])
+  defp parse_maps([], agg), do: Enum.into(agg, %{})
+
+  defp parse_maps([hd | tl], agg) do
+    parse_maps(tl, [parse_map(hd) | agg])
+  end
+
+  defp parse_map(line) do
+    [map_name | mappings] =
+      String.split(line, "\n")
+
+    %{"source" => source, "destination" => destination} =
+      Regex.named_captures(~r/(?<source>.+)\-to\-(?<destination>.+) map:/, map_name)
+
+    {String.to_atom(source), {String.to_atom(destination), source_ranges(mappings)}}
+  end
+
+  defp source_ranges(mappings) do
+    mappings
+    |> Enum.map(&source_range/1)
+    |> Enum.sort()
+  end
+
+  defp source_range(line) do
+    [destination, source, count] =
+      line
+      |> String.split()
+      |> Enum.map(&String.to_integer/1)
+
+    {source..(source + count - 1), destination - source}
+  end
+end
+```
+
+```elixir
+defmodule Solution do
+  def solution(seeds, maps) do
+    Enum.flat_map(seeds, &calculate_location([&1], maps, :seed))
+    |> Enum.min()
+    |> range_start()
+  end
+
+  defp range_start(first.._last), do: first
+
+  defp calculate_location(ranges, _maps, :location), do: ranges
+
+  defp calculate_location(ranges, maps, map_name) do
+    {{destination, transformers}, remaining_maps} = Map.pop!(maps, map_name)
+
+    new_ranges = transform(ranges, transformers, [])
+
+    calculate_location(new_ranges, remaining_maps, destination)
+  end
+
+  defp transform([], _transform, agg), do: minimize(agg)
+
+  defp transform([range | tl], transformers, agg) do
+    new_agg = agg ++ transform_range(range, transformers, [])
+    transform(tl, transformers, new_agg)
+  end
+
+  defp transform_range(nil, _, agg), do: agg
+  defp transform_range(range, [], agg), do: [range | agg]
+
+  defp transform_range(range, [{source, augend} | tl], agg) do
+    if Range.disjoint?(range, source) do
+      transform_range(range, tl, agg)
+    else
+      first..last = range
+      source_first..source_last = source
+
+      pre =
+        if first < source_first do
+          [first..(source_first - 1)]
+        else
+          []
+        end
+
+      middle =
+        max(first, source_first)..min(last, source_last)
+        |> Range.shift(augend)
+
+      post =
+        if last > source_last do
+          (source_last + 1)..last
+        else
+          nil
+        end
+
+      transform_range(post, tl, agg ++ pre ++ [middle])
+    end
+  end
+
+  defp minimize(list_of_ranges) do
+    list_of_ranges
+    |> Enum.sort()
+    |> Enum.reduce([], &merge_ranges/2)
+  end
+
+  defp merge_ranges(middle..last, [first..middle_2 | tl]) when middle == middle_2 - 1,
+    do: [first..last | tl]
+
+  defp merge_ranges(range, agg), do: [range | agg]
+end
+```
+
+```elixir
+sample_parsed = Parser.parse(sample)
+```
+
+```elixir
+full_parsed = Parser.parse(full_input)
+```
+
+```elixir
+parsed = full_parsed
+```
+
+```elixir
+seeds = Enum.map(parsed.seeds, fn v -> v..v end)
+```
+
+```elixir
+Solution.solution(seeds, parsed.maps)
+```
+
+```elixir
+seeds2 =
+  parsed.seeds
+  |> Enum.chunk_every(2)
+  |> Enum.map(fn [source, count] -> source..(source + count - 1) end)
+```
+
+```elixir
+Solution.solution(seeds2, parsed.maps)
+```
