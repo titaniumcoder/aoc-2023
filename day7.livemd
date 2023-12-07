@@ -1,0 +1,263 @@
+# Day 7
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Part 1
+
+```elixir
+sample_input_text = Kino.Input.textarea("Sample Input")
+```
+
+```elixir
+sample_input = Kino.Input.read(sample_input_text)
+```
+
+## Solution
+
+```elixir
+defmodule Parser do
+  defmodule Player do
+    defstruct [:hand, :bid]
+  end
+
+  def parse_input(input) do
+    String.split(input, "\n")
+    |> Enum.map(&String.split/1)
+    |> Enum.map(fn [hand, bid] -> %Player{hand: hand, bid: String.to_integer(bid)} end)
+  end
+end
+```
+
+```elixir
+Parser.parse_input(sample_input)
+```
+
+```elixir
+defmodule Part1 do
+  def solution(input) do
+    Parser.parse_input(input)
+    |> Enum.map(&hand_value_with_bid/1)
+    |> Enum.sort_by(fn {hand, _bid} -> order_value(hand) end)
+    |> Enum.reverse()
+    |> Enum.with_index(1)
+    |> Enum.map(fn {{_, bid}, idx} -> idx * bid end)
+    |> Enum.sum()
+    |> dbg()
+  end
+
+  defp hand_value_with_bid(%{hand: hand, bid: bid}) do
+    {{type(hand), hand}, bid}
+  end
+
+  @hand_types [
+    :five,
+    :four,
+    :full_house,
+    :three,
+    :two_pair,
+    :pair,
+    :high_card
+  ]
+
+  @card_orders [
+    "A",
+    "K",
+    "Q",
+    "J",
+    "T",
+    "9",
+    "8",
+    "7",
+    "6",
+    "5",
+    "4",
+    "3",
+    "2"
+  ]
+
+  defp order_value({type, cards}) do
+    {
+      Enum.find_index(@hand_types, &(&1 == type)),
+      hand_value(cards)
+    }
+  end
+
+  defp type(hand) when is_binary(hand), do: type(String.graphemes(hand) |> Enum.sort())
+
+  defp type(cards) do
+    cards
+    |> Enum.frequencies()
+    |> Enum.map(fn {_card, count} -> count end)
+    |> Enum.sort(:desc)
+    |> case do
+      [5] -> :five
+      [4, 1] -> :four
+      [3, 2] -> :full_house
+      [3 | _] -> :three
+      [2, 2, 1] -> :two_pair
+      [2 | _] -> :pair
+      _ -> :high_card
+    end
+  end
+
+  defp hand_value(hand) do
+    hand
+    |> String.graphemes()
+    |> Enum.map(fn card ->
+      Enum.find_index(@card_orders, &(&1 == card))
+    end)
+  end
+end
+```
+
+```elixir
+Part1.solution(sample_input)
+```
+
+```elixir
+input1 = Kino.Input.textarea("Full Input")
+```
+
+```elixir
+lines1 = Kino.Input.read(input1)
+Part1.solution(lines1)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def solution(input) do
+    Parser.parse_input(input)
+    |> Enum.map(&hand_value_with_bid/1)
+    |> Enum.sort_by(fn {hand, _bid} -> order_value(hand) end)
+    |> Enum.reverse()
+    |> Enum.with_index(1)
+    |> Enum.map(fn {{_, bid}, idx} -> idx * bid end)
+    |> Enum.sum()
+    |> dbg(limit: :infinity)
+  end
+
+  defp hand_value_with_bid(%{hand: hand, bid: bid}) do
+    {{type(hand), hand}, bid}
+  end
+
+  @hand_types [
+    :five,
+    :four,
+    :full_house,
+    :three,
+    :two_pair,
+    :pair,
+    :high_card
+  ]
+
+  @card_orders [
+    "A",
+    "K",
+    "Q",
+    "T",
+    "9",
+    "8",
+    "7",
+    "6",
+    "5",
+    "4",
+    "3",
+    "2",
+    "J"
+  ]
+
+  defp order_value({type, cards}) do
+    {
+      Enum.find_index(@hand_types, &(&1 == type)),
+      hand_value(cards)
+    }
+  end
+
+  defp type(hand) when is_binary(hand), do: type(String.graphemes(hand) |> Enum.sort())
+
+  defp type(cards) do
+    cards
+    |> Enum.frequencies()
+    |> Enum.sort_by(fn {_card, count} -> count end, :desc)
+    |> card_list_value()
+  end
+
+  defp card_list_value(list) do
+    {joker, cards} = remove_joker(list)
+
+    jokers =
+      case joker do
+        [] -> 0
+        [{"J", x}] -> x
+      end
+
+    {card1, card2} =
+      cards
+      |> Enum.map(fn {_card, count} -> count end)
+      |> Enum.take(2)
+      |> case do
+        [] -> {0, 0}
+        [card1] -> {card1, 0}
+        [card1 | [card2 | _]] -> {card1, card2}
+      end
+
+    cond do
+      card1 + jokers == 5 -> :five
+      card1 + jokers == 4 -> :four
+      card1 + jokers == 3 and card2 == 2 -> :full_house
+      card1 + jokers == 3 -> :three
+      card1 + jokers == 2 and card2 == 2 -> :two_pair
+      card1 + jokers == 2 -> :pair
+      true -> :high_card
+    end
+  end
+
+  defp remove_joker(list) do
+    Enum.split_with(list, fn {card, _} -> card == "J" end)
+  end
+
+  defp hand_value(hand) do
+    hand
+    |> String.graphemes()
+    |> Enum.map(fn card ->
+      Enum.find_index(@card_orders, &(&1 == card))
+    end)
+  end
+end
+```
+
+```elixir
+"""
+2345A 1
+Q2KJJ 13
+Q2Q2Q 19
+T3T3J 17
+T3Q33 11
+2345J 3
+J345A 2
+32T3K 5
+T55J5 29
+KK677 7
+KTJJT 34
+QQQJA 31
+JJJJJ 37
+JAAAA 43
+AAAAJ 59
+AAAAA 61
+2AAAA 23
+2JJJJ 53
+JJJJ2 41
+"""
+|> String.trim_trailing()
+|> Part2.solution()
+```
+
+```elixir
+Part2.solution(lines1)
+```
