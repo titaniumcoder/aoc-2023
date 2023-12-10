@@ -1,0 +1,173 @@
+# Day 8
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Part 1
+
+```elixir
+sample_input_text = Kino.Input.textarea("Sample Input")
+```
+
+```elixir
+sample_input = Kino.Input.read(sample_input_text) |> String.trim_trailing()
+```
+
+## Solution
+
+```elixir
+defmodule Parser do
+  defmodule WayOut do
+    defstruct [:instruction, :nodes]
+  end
+
+  @regex ~r/(?<name>.*) = (.*)\((?<left>.*)\, (?<right>.*)\)/
+
+  def parse_input(input) do
+    [instruction, nodes] = String.split(input, "\n\n")
+
+    %WayOut{
+      instruction: instruction,
+      nodes: nodes |> String.split("\n") |> parse_nodes(%{})
+    }
+  end
+
+  defp parse_nodes([], agg), do: agg
+
+  defp parse_nodes([line | next_lines], agg) do
+    %{"name" => name, "left" => left, "right" => right} =
+      Regex.named_captures(@regex, line)
+
+    parse_nodes(next_lines, Map.put(agg, name, {left, right}))
+  end
+end
+```
+
+```elixir
+Parser.parse_input(sample_input)
+```
+
+```elixir
+defmodule Part1 do
+  def solution(input) do
+    parsed_input = Parser.parse_input(input)
+
+    number_of_repeated_instructions =
+      parsed_input
+      |> apply_instruction_to_each_node()
+      |> find_way_out("AAA", 0)
+
+    number_of_repeated_instructions * String.length(parsed_input.instruction)
+  end
+
+  defp apply_instruction_to_each_node(%{instruction: instruction, nodes: nodes}) do
+    nodes
+    |> Enum.map(&apply_node_instructions(&1, instruction, nodes))
+    |> Enum.reduce(&Map.merge/2)
+  end
+
+  defp apply_node_instructions({starting_node, {_, _}}, instruction, nodes) do
+    %{starting_node => calculate_ending_node(starting_node, instruction, nodes)}
+  end
+
+  defp calculate_ending_node(current_node, "", _nodes), do: current_node
+
+  defp calculate_ending_node(current_node, "L" <> instructions, nodes) do
+    {left, _right} = Map.get(nodes, current_node)
+    calculate_ending_node(left, instructions, nodes)
+  end
+
+  defp calculate_ending_node(current_node, "R" <> instructions, nodes) do
+    {_left, right} = Map.get(nodes, current_node)
+    calculate_ending_node(right, instructions, nodes)
+  end
+
+  defp find_way_out(_nodes, "ZZZ", counter), do: counter
+
+  defp find_way_out(nodes, current_node, counter) do
+    new_node = Map.get(nodes, current_node)
+    find_way_out(nodes, new_node, counter + 1)
+  end
+end
+```
+
+```elixir
+Part1.solution(sample_input)
+```
+
+```elixir
+input1 = Kino.Input.textarea("Full Input")
+```
+
+```elixir
+lines1 = Kino.Input.read(input1)
+Part1.solution(lines1)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def solution(input) do
+    %{instruction: instruction, nodes: nodes} = Parser.parse_input(input)
+    instructions = String.codepoints(instruction)
+
+    nodes
+    |> Map.keys()
+    |> Enum.filter(&String.ends_with?(&1, "A"))
+    |> Enum.map(fn start ->
+      go_through_map(start, nodes, 0, instructions, instructions)
+    end)
+    |> Enum.reduce(1, &lcm/2)
+    |> dbg()
+  end
+
+  def go_through_map(current_key, ghost_map, counter, [], path),
+    do: go_through_map(current_key, ghost_map, counter, path, path)
+
+  def go_through_map(current_key, ghost_map, counter, [move | moves], path) do
+    if String.ends_with?(current_key, "Z") do
+      counter
+    else
+      case move do
+        "L" -> move_left(ghost_map, counter + 1, path, moves, ghost_map[current_key])
+        "R" -> move_right(ghost_map, counter + 1, path, moves, ghost_map[current_key])
+      end
+    end
+  end
+
+  defp move_left(ghost_map, counter, path, moves, {left, _}) do
+    go_through_map(left, ghost_map, counter, moves, path)
+  end
+
+  defp move_right(ghost_map, counter, path, moves, {_, right}) do
+    go_through_map(right, ghost_map, counter, moves, path)
+  end
+
+  defp lcm(a, b), do: div(a * b, Integer.gcd(a, b))
+end
+```
+
+```elixir
+"""
+LR
+
+11A = (11B, XXX)
+11B = (XXX, 11Z)
+11Z = (11B, XXX)
+22A = (22B, XXX)
+22B = (22C, 22C)
+22C = (22Z, 22Z)
+22Z = (22B, 22B)
+XXX = (XXX, XXX)
+"""
+|> String.trim_trailing()
+|> Part2.solution()
+```
+
+```elixir
+Part2.solution(lines1)
+```
