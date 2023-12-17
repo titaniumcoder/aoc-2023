@@ -1,0 +1,131 @@
+# Day 9
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Part 1
+
+```elixir
+sample_input_text = Kino.Input.textarea("Sample Input")
+```
+
+```elixir
+sample_input = Kino.Input.read(sample_input_text) |> String.trim_trailing()
+```
+
+## Solution
+
+```elixir
+defmodule Parser do
+  def parse_input(input) do
+    input
+    |> String.split("\n")
+    |> Enum.map(&parse_line/1)
+  end
+
+  def parse_line(line) do
+    line
+    |> String.split()
+    |> Enum.map(&String.to_integer/1)
+  end
+end
+```
+
+```elixir
+[line1, line2, line3] = Parser.parse_input(sample_input)
+```
+
+```elixir
+defmodule Part1 do
+  def solution(input) do
+    Parser.parse_input(input)
+    |> Enum.map(&handle_line/1)
+    |> Enum.sum()
+  end
+
+  def handle_line(numbers) do
+    numbers
+    |> Enum.reverse()
+    |> calculate_next_number([])
+  end
+
+  def calculate_next_number(numbers, first_numbers) do
+    if Enum.all?(numbers, &(&1 == 0)) do
+      calculate_end_number(first_numbers)
+    else
+      diffs = calculate_diffs(numbers)
+      calculate_next_number(diffs, [hd(numbers) | first_numbers])
+    end
+  end
+
+  def calculate_diffs([hd1 | [hd2 | tl]]) do
+    [hd1 - hd2 | calculate_diffs([hd2 | tl])]
+  end
+
+  def calculate_diffs([_n]) do
+    []
+  end
+
+  defp calculate_end_number(x), do: Enum.sum(x)
+end
+```
+
+```elixir
+Part1.solution(sample_input)
+```
+
+```elixir
+full_input = File.read!("/data/advent-of-code/day9.input")
+```
+
+```elixir
+Part1.solution(full_input)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def solution(input) do
+    Parser.parse_input(input)
+    |> Enum.map(&handle_line/1)
+    |> dbg()
+    |> Enum.sum()
+  end
+
+  def handle_line(numbers) do
+    numbers
+    |> calculate_next_number([])
+  end
+
+  def calculate_next_number(numbers, first_numbers) do
+    if Enum.all?(numbers, &(&1 == 0)) do
+      calculate_end_number(first_numbers)
+    else
+      diffs = calculate_diffs(numbers)
+      calculate_next_number(diffs, [hd(numbers) | first_numbers])
+    end
+  end
+
+  def calculate_diffs([hd1 | [hd2 | tl]]) do
+    [hd1 - hd2 | calculate_diffs([hd2 | tl])]
+  end
+
+  def calculate_diffs([_n]) do
+    []
+  end
+
+  defp calculate_end_number(x), do: Enum.sum(x)
+end
+```
+
+```elixir
+Part2.solution(sample_input)
+```
+
+```elixir
+Part2.solution(full_input)
+```
